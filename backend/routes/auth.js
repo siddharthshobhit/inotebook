@@ -34,10 +34,7 @@ router.post(
         email: req.body.email,
         password: req.body.password,
       })
-        .then((user) => res.json(user))
-        .catch((err) => {
-          res.json({ error: err });
-        });
+      res.json(user);
     } catch (error) {
       console.error(error.message);
       res.status(500).send("Something went wrong")
