@@ -16,6 +16,7 @@ router.post(
     body("password").isLength({ min: 5 }),
   ],
   async (req, res) => { 
+    console.log("req", req.body);
     // Error handling for modles
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -40,16 +41,53 @@ router.post(
         password: secPassword,
       });
       const data = {
-        user: user.id
+        id: user.id
       } 
       const authToken = jwt.sign(data, JWT_SECRETE); 
       res.json({authToken});
     } catch (error) {
       console.error(error.message);
-      res.status(500).send("Something went wrong")
+      res.status(500).send("Internal server error")
     }
     
   }
 );
 
+
+// Auth a user using API "/api/login" doesnt require auth
+router.post(
+  "/login",
+  [
+    body("email", "Enter a valid email").isEmail(),
+    body("password", "Can't be empty").exists(),
+  ],
+  async (req, res) => {
+    // Error handling for modles
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    const { email, password } = req.body;
+    try {
+      // Check if user is already exists
+      let user = await User.findOne({ email });
+      if (!user) {
+        return user.status(404).json({ error: "User doesn't exists" });
+      } 
+      const passwordCompare = await bcrypt.compare(password, user.password)
+      if (!passwordCompare) {
+        return user.status(404).json({ error: "Please correct credentials" });
+      } 
+
+      const data = {
+        id: user.id,
+      };
+      const authToken = jwt.sign(data, JWT_SECRETE);
+      res.json({ authToken });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send("Internal server error");
+    }
+  }
+);
 module.exports = router;
