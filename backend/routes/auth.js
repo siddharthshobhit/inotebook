@@ -5,7 +5,8 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const token = jwt.sign({ foo: "bar" }, "shhhhh");
-const JWT_SECRETE = 'Sidisacoolguy'
+const JWT_SECRETE = "Sidisacoolguy";
+const fetchuser = require("../middleware/fetchuser");
 // create a user using API "/api/auth" doesnt require auth
 router.post(
   "/createuser",
@@ -15,7 +16,7 @@ router.post(
     // body("email")(),
     body("password").isLength({ min: 5 }),
   ],
-  async (req, res) => { 
+  async (req, res) => {
     console.log("req", req.body);
     // Error handling for modles
     const errors = validationResult(req);
@@ -25,34 +26,32 @@ router.post(
 
     try {
       // Check if user is already exists
-      let user = await User.findOne({ email: req.body.email }); 
+      let user = await User.findOne({ email: req.body.email });
       if (user) {
         return res
           .status(400)
           .json({ errors: "User with this mail already exist" });
-      } 
+      }
       // Create a new user
-       const salt = await bcrypt.genSaltSync(10); 
+      const salt = await bcrypt.genSaltSync(10);
       const secPassword = await bcrypt.hash(req.body.password, salt);
-      
+
       user = await User.create({
         name: req.body.name,
         email: req.body.email,
         password: secPassword,
       });
       const data = {
-        id: user.id
-      } 
-      const authToken = jwt.sign(data, JWT_SECRETE); 
-      res.json({authToken});
+        id: user.id,
+      };
+      const authToken = jwt.sign(data, JWT_SECRETE);
+      res.json({ authToken });
     } catch (error) {
       console.error(error.message);
-      res.status(500).send("Internal server error")
+      res.status(500).send("Internal server error");
     }
-    
   }
 );
-
 
 // Auth a user using API "/api/login" doesnt require auth
 router.post(
@@ -73,11 +72,11 @@ router.post(
       let user = await User.findOne({ email });
       if (!user) {
         return user.status(404).json({ error: "User doesn't exists" });
-      } 
-      const passwordCompare = await bcrypt.compare(password, user.password)
+      }
+      const passwordCompare = await bcrypt.compare(password, user.password);
       if (!passwordCompare) {
         return user.status(404).json({ error: "Please correct credentials" });
-      } 
+      }
 
       const data = {
         id: user.id,
@@ -89,4 +88,17 @@ router.post(
     }
   }
 );
+
+// Auth a user using API "/api/login" doesnt require auth
+router.post("/getuser", fetchuser, async (req, res) => {  
+  try {
+    // Check if user is already exists 
+    const userId = req.user; 
+    const user = await User.findById(userId).select("-password"); 
+    console.log("user", user);
+    res.send(user);
+  } catch (error) { 
+    res.status(500).send("Internal server error");
+  }
+});
 module.exports = router;
